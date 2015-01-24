@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//W3C//DD XHTML 1.0 Transitional//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+
+<head>
+	<script type="text/javascript">
+		function people(name, age){  ///constructor function
+			this.name = name;
+			this.age = age;
+			this.yearsUntillRetire = yearsLeft;//No parenthesis!!!
+		}
+		
+		function yearsLeft(){
+			var numYears = 65 - this.age;
+			return numYears;
+		}
+		
+		var natalie = new people("Natalie Portman",28);//natalie is object, created using blueprint "obj1" using constructor function
+		var bucky = new people("Bucky Roberts",24);
+	</script>	
+</head>
+
+<body>
+	<script type="text/javascript">
+		document.write(natalie.yearsUntillRetire());///Parenthesis
+		document.write(bucky.yearsUntillRetire());
+	</script>
+
+
+</body>
+
+</html>

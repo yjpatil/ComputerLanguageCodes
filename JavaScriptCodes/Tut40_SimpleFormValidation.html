@@ -1,0 +1,29 @@
+<!DOCTYPE html PUBLIC "-//W3C//DD XHTML 1.0 Transitional//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+
+<head>
+	
+</head>
+
+<body>
+	<form name="buckysForum">
+		<input type = "checkbox" name="thebox"/>
+		<input type = "button" value="Press Me" onClick ="validator()"/> 
+		
+	</form>
+
+	<script type="text/javascript">
+		function validator(){ ///validator is onClick called function in 'form'
+			if(document.buckysForum.thebox.checked) ////Just like C#
+				alert("Yep its checked;");
+			else
+				alert("No its not checked");
+		}
+	</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DD XHTML 1.0 Transitional//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+
+<head>
+	
+</head>
+
+<body>
+	<form name="buckysForm">
+		Username:<input type = "text" name="username"/>
+		Password:<input type = "password" name="passwd"/>
+		<input type="submit" value="Submit!!">
+	</form>
+
+	<script type="text/javascript">
+		//var x = document.forms[0].elements[1].name;//OR another way
+		var x = document.buckysForm.username.name;////Just like C#
+		document.write(x);
+	</script>
+
+
+</body>
+
+</html>
