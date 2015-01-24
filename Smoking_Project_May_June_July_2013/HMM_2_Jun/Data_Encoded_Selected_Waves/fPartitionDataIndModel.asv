@@ -1,0 +1,45 @@
+function[TrainData,TrLabels,TestData,TstLabels] = fPartitionDataIndModel(VTEnCod,I,PartitionType)
+% This function Partitions the data set into train and test
+% Partition Type = '1' Divide the half-half data into trian and test
+%                  '2' Divide the whole data into test
+
+
+FullSit = length(VTEnCod(I).Sit);
+FullRead = length(VTEnCod(I).Read);
+FullWalk = length(VTEnCod(I).Walk);
+FullSmk = length(VTEnCod(I).Smk);
+
+HalfSit = round(FullSit/2);
+HalfRead = round(FullRead/2);
+HalfWalk = round(FullWalk/2);
+HalfSmk = round(FullSmk/2);      
+
+if(PartitionType == 1)
+    % ======= Train & Labels Data Set ======== %    TrainData.Sit = VTEnCod(I).Sit(1 : HalfSit);
+TrLabels.Sit = 1 * ones(length(TrainData.Sit),1); % XXXX Sit XXXX
+
+TrainData.Read = VTEnCod(I).Read(1 : HalfRead);
+TrLabels.Read = 2 * ones(length(TrainData.Read),1); % XXXX Read XXXX
+
+TrainData.Walk = VTEnCod(I).Walk(1 : HalfWalk);
+TrLabels.Walk = 3 * ones(length(TrainData.Walk),1); % XXXX Walk XXXX
+
+TrainData.Smk = VTEnCod(I).Smk(1 : HalfSmk);     
+TrLabels.Smk = 4 * ones(length(TrainData.Smk),1); % XXXX Smk XXXX
+
+% ======= Test Data Set ========= %
+TestData.Sit = VTEnCod(I).Sit((HalfSit + 1):FullSit);
+TstLabels.Sit = 1 * ones(length(TestData.Sit),1); % XXXX Sit XXXX
+
+TestData.Read = VTEnCod(I).Read((HalfRead + 1):FullRead);
+TstLabels.Read = 2 * ones(length(TestData.Read),1); % XXXX Read XXXX
+
+TestData.Walk = VTEnCod(I).Walk((HalfWalk + 1):FullWalk);
+TstLabels.Walk = 3 * ones(length(TestData.Walk),1); % XXXX Walk XXXX
+
+TestData.Smk = VTEnCod(I).Smk((HalfSmk + 1):FullSmk);     
+TstLabels.Smk = 4 * ones(length(TestData.Smk),1); % XXXX Smk XXXX
+
+
+
+end

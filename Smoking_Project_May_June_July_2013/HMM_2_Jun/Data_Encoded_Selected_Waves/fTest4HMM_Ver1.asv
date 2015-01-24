@@ -1,0 +1,51 @@
+function[Log1,Log2,Log3,Log4,EstLabel] = fTest4HMM_Ver1(Data,Labels,HMM1,HMM2,HMM3,HMM4)
+% This function test the Trained HMMs against the Train/Test Data set
+% Data = Data set containing the Encoded Waves
+% Labels = 
+
+
+
+Names1 = fieldnames(Data); 
+
+Itr1 = 1;
+
+for i = 1 : 1 : length(Names1)    % Now start copying data from the same field in struct 1 to struct 2 
+    
+    DataArray = getfield(Data,Names1{i});  % Get the data of the ith field, which is the wave numbers  
+    LabelArray = getfield(Labels,Names1{i});
+    L = length(DataArray);
+    
+    if(isempty(DataArray))        
+    else
+        for j = 1 : 1 : L
+            Log1(i).loglik(j) = dhmm_logprob(DataArray{j}, HMM1.prior, HMM1.transmat, HMM1.obsmat);    
+            Log2(i).loglik(j) = dhmm_logprob(DataArray{j}, HMM2.prior, HMM2.transmat, HMM2.obsmat);    
+            Log3(i).loglik(j) = dhmm_logprob(DataArray{j}, HMM3.prior, HMM3.transmat, HMM3.obsmat);    
+            Log4(i).loglik(j) = dhmm_logprob(DataArray{j}, HMM4.prior, HMM4.transmat, HMM4.obsmat);
+            
+            Index = find( min([ Log1(i).loglik(j) Log2(i).loglik(j) Log3(i).loglik(j) Log4(i).loglik(j) ]) == [ Log1(i).loglik(j) Log2(i).loglik(j) Log3(i).loglik(j) Log4(i).loglik(j) ]);
+            
+            if(Index == 1)
+                EstLabel(Itr1,1) = 1;
+                EstLabel(Itr1,2) = LabelArray(j);
+            elseif(Index == 2)
+                EstLabel(Itr1,1) = 2;
+                EstLabel(Itr1,2) = LabelArray(j);
+            elseif(Index == 3)
+                EstLabel(Itr1,1) = 3;
+                EstLabel(Itr1,2) = LabelArray(j);
+            elseif(Index == 4)
+                EstLabel(Itr1,1) = 4;
+                EstLabel(Itr1,2) = LabelArray(j);
+            end
+                
+        end
+    end
+    
+end
+
+
+
+
+
+end

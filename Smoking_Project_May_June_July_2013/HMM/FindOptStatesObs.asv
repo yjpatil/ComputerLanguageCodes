@@ -1,0 +1,112 @@
+function [TableTest,TableTrain,LogStruct,OptTest,OptTrain] = FindOptStatesObs(VTts,ASts,Score,CodeAct,S_start,S_end,O_start,O_end,ActTrain,ActTest,Actlist,TimeInst,LogStruct)
+
+OptTest = [0 0 -2000 std(loglikSA) length(loglikSA) min(loglikSA) max(loglikSA)];
+
+% -------------------- Make All Changes Here -------------------- %    
+%States = 15;Obs = 16;    
+%ActTrain = 1;ActTest = 1;
+
+strTrain = Actlist(ActTrain,:);
+strTest = Actlist(ActTest,:);    
+
+%CodeTrain = Code51;CodeTest = Code11;
+TimeInstTrain = TimeInst;
+TimeInstTest = TimeInst;    
+
+Code = CodeAct;
+Len = length(Code);
+HLen = round(length(Code)*(1/2));   % <<------ Include:: Size of the Training Data Set is Half  
+CodeTrain = Code(1:HLen);    
+CodeTest = Code(HLen+1:Len);    
+
+TimeInstTrain = TimeInstTrain(1:HLen,:);
+TimeInstTest = TimeInstTest(HLen+1:Len,:);
+% ---------------------------------------------------------------- %
+
+I = 1;  %  <<--- Index for Table
+
+for States = S_start:1:S_end   % <<------ Include:: Step-size/Increment
+    for Obs = O_start:1:O_end  % <<------ Include:: Step-size/Increment
+        
+        [LogLkhdAct1, HMMAct1] = GetHMM(CodeTrain,States,Obs);
+        
+        %fprintf('\n ======================================================= \n');
+        %fprintf('\n ========= Test Results for Act %s HMM on ACT %s ========= \n',ActTrain,ActTest);    
+        
+        %[J] = LogLkTestPlot(VTts,ASts,TimeInstTest,ActTest,Activities,111,222,Score); % 
+        
+        for i = 1 : 1 : length(CodeTest)
+            %j = Array(i);
+            loglikOA(i) = dhmm_logprob(CodeTest{i},HMMAct1.prior, HMMAct1.transmat, HMMAct1.obsmat);
+            %figure(111);gcf;hold on;title(strcat('Tidal Volume for Activity','__ ',strTest));
+            %T1 = TimeInstTest(i,1);
+            %T2 = TimeInstTest(i,2);
+            %text(T1+((T2-T1)/2),2.1,num2str(loglikOA(i)))
+            %disp(sprintf('[class ACT 10: %d -th data]model ACT 1:%.3f',i,loglikOA(i) ));
+        end
+        
+        %fprintf('\n ======================================================= \n');
+        %fprintf('\n ========= Test Results for Act %s HMM on ACT %s ========= \n',ActTest,ActTest);    
+        
+        %[K] = LogLkTestPlot(VTts,ASts,TimeInstTrain,ActTrain,Activities,333,444,Score); % Make Sure to plot only    
+        
+        for i = 1 : 1 : length(CodeTrain)
+            %j = Array(i); % On the SAME ACTIVITY (SA)
+            loglikSA(i) = dhmm_logprob(CodeTrain{i},HMMAct1.prior, HMMAct1.transmat, HMMAct1.obsmat);
+            %figure(333);gcf;hold on;title(strcat('Tidal Volume for Activity','__',strTrain));
+            %T1 = TimeInstTrain(i,1);
+            %T2 = TimeInstTrain(i,2);
+            %text(T1+((T2-T1)/2),2.1,num2str(loglikSA(i)))
+            %disp(sprintf('[class ACT 1: %d -th data]model ACT 1:%.3f',i,loglikSA(i) ));
+        end
+        
+        %fprintf('\n ======================================================= \n');    
+        
+        Ind1 = find(loglikSA == -Inf);
+        loglikSA(Ind1) = [];    
+        
+        Ind2 = find(loglikOA == -Inf);
+        loglikOA(Ind2) = [];
+        
+        
+        LogStruct(I).loglikSA = loglikSA;
+        
+        LogStruct(I).loglikOA = loglikOA;
+        
+        LogStruct(I).States = States;
+        
+        LogStruct(I).Obs = Obs;
+        
+        % ------- Update teh Tables ------ %
+        TableTrain(I,:) = [States Obs mean(loglikSA) std(loglikSA) length(loglikSA) min(loglikSA) max(loglikSA)];
+        
+        TableTest(I,:) = [States Obs mean(loglikOA) std(loglikOA) length(loglikOA) min(loglikOA) max(loglikOA)];
+        
+        if(TableTest(I,3) > OptTest)
+        
+        
+        I = I + 1;
+    end
+end
+        
+        
+        
+        
+        
+        
+
+
+
+
+
+
+
+
+
+
+end
+
+
+
+
+

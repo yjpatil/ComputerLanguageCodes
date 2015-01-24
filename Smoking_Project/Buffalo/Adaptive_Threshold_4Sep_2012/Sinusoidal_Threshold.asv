@@ -1,0 +1,30 @@
+function [sinu_Th] = Sinusoidal_Threshold(Fc,T1,T2,range)
+% Task: This function produces a sinusoidal wave between range(1) and
+% range(2). T1 is the start time of the sinusoidal wave, while T2 is the
+% end time of the sinusoidal wave.
+
+Fs = 8000;
+dt = 1/Fs;
+
+st = 0.25;
+T2 = T2 + st;
+
+t = (T1 : dt : T2 - dt);
+
+Fc = 260;
+
+x = cos(2*pi*Fc*t);
+
+% Following code normalizes the signal to given range/limits
+
+r1 = range(1);   % Minimum Value
+
+r2 = range(2);   % Maximum Value
+
+max_x = 
+
+
+
+
+
+end

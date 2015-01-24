@@ -1,0 +1,461 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%              CODE FOR FEATURE EXTRACTION            %%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clc;
+close all;
+clear all;
+
+sf = 101.73;           %% Sampling Frequency %%
+load 'Sub_023.mat'     %% Loading of Data %%
+
+L = length(Data);      
+
+ts = [1:L]/sf;         %% time-stamps %%
+ts = ts';
+ts = ts-(Activities(1,2));
+
+Z = zeros(L,1);        %% Array to clear non-smoking activities %%
+Z1 = zeros(L,1);       %% Array containing sitting smoking instances only
+Z2 = zeros(L,1);       %% Array containing standing smoking instances only
+
+ind1 = find(Activities(11,1) <= ts & ts <= Activities(11,2)); %% Smoking Sitting %%
+Z(ind1) = 1; 
+Z1(ind1) = 1;          %% Z1 contains 1 only in the places where the Activity for Smoking (sitting) STARTs
+
+ind2 = find(Activities(13,1) <= ts & ts <= Activities(13,2));  %% Smoking Standing %%
+Z(ind2) = 1;
+Z2(ind2) = 1;          %% Z2 contains 1 only in the places where the Activity for Smoking (standing) STARTs
+
+PB = (Data(:,1))/max(Data(:,1));       %% Normalized Push-Button data %%
+PB = PB .* Z;                          %% PB signal only for smoking %%
+
+PS1 = (Data(:,2))/max(Data(:,2));       %% Normalized Proximity-Sensor data %%
+PS1 = PS1.* Z;                           %% PS signal only for smoking %%
+%ind0 = find(PS1 >= 0.046);           %% Conversion of PS signals into SQUARE PULSES %%
+%clear 'PS1';
+%PS2 = zeros(L,1);
+%PS2(ind0) = 1;
+%PS = merge_func(ts,PS2,1.2);
+PS = merge_function1(PS1,ts,0.046,0.5,8,1.2);
+clear 'PS1';
+ASa = (Data(:,3))/max(Data(:,3));
+
+RC = (Data(:,4))/max(Data(:,4));      %% Normalized Rib-Cage plate Data %%
+AB = (Data(:,5))/max(Data(:,5));      %% Normalized Abdominal plate Data %%
+
+RC = RC .* Z;                         %% RC signal only for smoking %%
+AB = AB .* Z;                         %% AB signal only for smoking %%
+
+VT1 = (AB + RC)/2;                    %% Non-inverted VT signal %%
+ind3 = find(VT1 > 0);                 %% Procedure to find the mean-value %%
+nvt1 = length(ind3);                  %% Procedure to find the mean-value %%
+Mvt = (sum(VT1))/nvt1;
+VT = VT1 - Mvt; 
+VT = -1 * VT; 
+VT = VT + Mvt;                        %% Inverted VT signal %%
+VT = VT .* Z;                         %% VT signal only for smoking %%
+
+figure(1)
+% plot(ts,PB,ts,PS);
+plot(ts,PS,'-r');grid on;hold on;
+% % 
+% % figure(2)
+% % plot(ts,VT1,ts,VT);
+% % grid on;
+% % hold on;
+
+VT = idealfilter(VT,0.1,1000,sf);
+VT = VT .* Z;
+% % % % 
+% % % % figure(3)
+% % % % plot(ts,VT);
+% % % % grid on;
+% % % % hold on;
+% % 
+VT = fastsmooth(VT,25,1,0);
+% VT = VT .* Z;
+%figure(1)
+%plot(ts,VT,'r');grid on;hold on;
+
+ts1 = ts .* Z;
+
+AS = diff(VT)./diff(ts1);
+AS = [AS;0];
+%%%%%%%%%%%% Removal of The NaN values from AS %%%%%%%%%%%%
+I33 = find(Z == 0);
+AS(I33) = 0;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+AS = fastsmooth(AS,45,1,0);
+
+%figure(4)
+plot(ts,VT,'k');grid on;hold on;
+%plot(ts,VT,'m',ts,AS,'k');grid on;hold on;
+
+% % figure(55)
+% % plot(ts,VT,'b');grid on;hold on;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% To find peaks (Mag_peak_VT MpVT & Location_peak_VT LpVT) for VT signal
+%[LpVT,MpVT] = peakfinder(VT,0.015,-0.02,1);
+[LpVT,MpVT] = peakfinder(VT,0.0099,-0.02,1);
+LpVT = LpVT/sf;
+LpVT = LpVT-(Activities(1,2));
+plot(LpVT,MpVT,'om');grid on;hold on;
+
+%To find peaks (Mag_valley_VT MvVT & Location_valley_VT LvVT) for VT signal
+%[LvVT,MvVT] = peakfinder(VT,0.02,0.02,-1);
+[LvVT,MvVT] = peakfinder(VT,0.0099,0.02,-1);
+LvVT = LvVT/sf;
+LvVT = LvVT-(Activities(1,2));
+plot(LvVT,MvVT,'or');grid on;hold on;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%figure(56)
+plot(ts,AS,'b');
+grid on;hold on;
+
+%To find peaks (Mag_peak_AS MpAS & Location_peak_AS LpAS) for AS signal
+%[LpAS,MpAS] = peakfinder(AS,0.02,-0.02,1);
+[LpAS,MpAS] = peakfinder(AS,0.0099,-0.02,1);
+LpAS = LpAS/sf;
+LpAS = LpAS-(Activities(1,2));
+plot(LpAS,MpAS,'*m');grid on;hold on;
+
+% To find peaks (Mag_valley_AS MvAS & Location_valley_AS LvAS) for AS signal
+%[LvAS,MvAS] = peakfinder(AS,0.03,0.02,-1);
+[LvAS,MvAS] = peakfinder(AS,0.0099,0.02,-1);
+LvAS = LvAS/sf;
+LvAS = LvAS-(Activities(1,2));
+plot(LvAS,MvAS,'*r');grid on;hold on;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% To find the instances for end of hand gesture i.e. Proximity Sensor signal going to ZERO%%%
+%%% Proximity Sensor signals for 
+
+PS5 = PS.*Z1;
+[inttsPS1,y111] = intersections(ts,PS5,[0 ts(length(ts),1)],[0.1 0.1],1);
+% % % figure(121)
+% % % plot(ts,PS5,inttsPS1,y111,'*r');
+% % % grid on; hold on;
+
+PS6 = PS.*Z2;
+[inttsPS2,y111] = intersections(ts,PS6,[0 ts(length(ts),1)],[0.1 0.1],1);
+% % % figure(122)
+% % % plot(ts,PS6,inttsPS2,y111,'*r');
+% % % grid on; hold on;
+
+%%%%%%%%%%%%%%% Check whether the length of array is even %%%%%%%%%%%%%%%%%
+err1 = mod(length(inttsPS1),2);
+if err1 == 0
+else
+    disp('Error in INTERSECTION of Proximity Sensor (Sittiing PART)with Thres (ODD #)');
+    stop;    
+end
+err2 = mod(length(inttsPS2),2);
+if err2 == 0
+else
+    disp('Error in INTERSECTION of Proximity Sensor (Standing PART) with Thres (ODD #)');
+    stop;
+end
+
+
+% % TSHG = ((length(inttsPS1))/2 + (length(inttsPS2))/2) - 2;   %%  Total # of SMOKING HAND GESTURES  %%
+% % fprintf('Total # of SMOKING HAND GESTURES = %d',TSHG);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Now Rearrange the elements of inttsPS into even and odd indices
+%%% Get rid of the START and END two odd(even) points of the PS in the
+%%% two cases
+
+%%% SORTING of PS signals for SITTING Part into Start and End parts of
+%%% matrix n X 2 AND ALSO getting RID of first & last 3 ELEMENTS 
+% SORTtsPS1(:,1) = inttsPS1(5:2:(length(inttsPS1)-5));
+% SORTtsPS1(:,2) = inttsPS1(6:2:(length(inttsPS1)-4));
+SORTtsPS1(:,1) = inttsPS1(5:2:(length(inttsPS1)-2));
+SORTtsPS1(:,2) = inttsPS1(6:2:(length(inttsPS1)-1));
+
+%%%%%%%%  Check whether the length of array is EVEN OR NOT   %%%%%%%%%%%%%
+% % % err1 = mod(length(SORTtsPS1),2);
+% % % if err1 == 0
+% % % else
+% % %     disp('Error in SORTING of Proximity Sensor(Sittiing PART) Intersections (ODD #)');
+% % %     stop;    
+% % % end
+% % % err2 = mod(length(SORTtsPS1),2);
+% % % if err2 == 0
+% % % else
+% % %     disp('Error in SORTING of Proximity Sensor(Standing PART) Intersections (ODD #)');
+% % %     stop;
+% % % end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% SORTING of PS signals for STANDING Part into Start and End parts of
+%%% matrix n X 2 AND ALSO getting RID of first & last 3 ELEMENTS 
+SORTtsPS2(:,1) = inttsPS2(5:2:(length(inttsPS2)-2));
+SORTtsPS2(:,2) = inttsPS2(6:2:(length(inttsPS2)-1));
+
+%%%%%%%%  Check whether the length of array is EVEN OR NOT   %%%%%%%%%%%%%
+% % % % err1 = mod(length(SORTtsPS2),2);
+% % % % if err1 == 0
+% % % % else
+% % % %     disp('Error in SORTING of Proximity Sensor(Standing PART) Intersections (ODD #)');
+% % % %     stop;    
+% % % % end
+% % % % err2 = mod(length(SORTtsPS2),2);
+% % % % if err2 == 0
+% % % % else
+% % % %     disp('Error in SORTING of Proximity Sensor(Standing PART) Intersections (ODD #)');
+% % % %     stop;
+% % % % end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+SEtsPS = cat(1,SORTtsPS1,SORTtsPS2); %% Contains time stamp for START && END of PS signals MATRIX OF (N X 2) %%
+
+EtsPS = cat(1,SORTtsPS1(:,2),SORTtsPS2(:,2));  %% Contains only time stamp for END of PS signals %%
+T_Hand = cat(1,SORTtsPS1,SORTtsPS2);
+
+PARA4 = T_Hand(:,2) - T_Hand(:,1);  %% <|=============== PARAMETER # 4 duration of hand remaining to the mouth
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%% TIME STAMPS FOR PEAKS && VALLEYS OF VT AND AS SIGNALS %%%%%
+
+PtsVT = [LpVT MpVT];
+VtsVT = [LvVT MvVT];
+
+PtsAS = [LpAS MpAS];
+VtsAS = [LvAS MvAS];
+
+IT = 0; IND = 0;i = 1;PARA6 = [0;0]; %% <|=============== PARAMETER # 6 %%
+PEAK_AS_INSP = [0 0];
+for IT = 1 : 1 : length(EtsPS)
+    IND = find(EtsPS(IT)-0.3 <= LpAS   & LpAS <= EtsPS(IT)+ 3.1,1);  %% SEE MATLAB help for "find" with 'first' and 'last' Option %%
+    %IND = min(IND);
+    ERR1 = isempty(IND);
+    if(ERR1 == 1)
+    else
+        PEAK_AS_INSP(i,1) = PtsAS(IND,1);    %% Contains the TIME STAMPS for PEAK_AS_INSP PARAMETER %%
+        PEAK_AS_INSP(i,2) = PtsAS(IND,2);    %% Contains the PEAK AMPLITUDE VALUES for PEAK_AS_INSP PARAMETER %%
+        i = i + 1;
+    end
+end
+PARA6 = PEAK_AS_INSP(:,2);
+median(PARA6)
+figure(1)
+plot(PEAK_AS_INSP(:,1),PEAK_AS_INSP(:,2),'*b');grid on;hold on;
+%%%%
+TSHG = length(PARA6);   %%  Total # of SMOKING HAND GESTURES  %%
+fprintf('Total # of SMOKING HAND GESTURES = %d',TSHG);
+%%%%
+
+IT = 0; IND = 0;i = 1; PARA5 = [0;0]; %% <|=============== PARAMETER # 5 %%
+PEAK_Vt = [0 0];
+for IT = 1 : 1 : length(PEAK_AS_INSP)
+    IND = find(PEAK_AS_INSP(IT,1) <= LpVT   & LpVT <= PEAK_AS_INSP(IT,1)+ 3.1,1);  %% SEE MATLAB help for "find" with 'first' and 'last' Option %%
+    %IND = min(IND);
+    ERR1 = isempty(IND);
+    if(ERR1 == 1)
+    else
+        PEAK_Vt(i,1) = PtsVT(IND,1);    %% Contains the TIME STAMPS for PEAK_Vt PARAMETER %%
+        PEAK_Vt(i,2) = PtsVT(IND,2);    %% Contains the PEAK AMPLITUDE VALUES for PEAK_Vt PARAMETER %%
+        i = i + 1;
+    end
+end
+PARA5 = PEAK_Vt(:,2);
+median(PARA5)
+figure(1)
+plot(PEAK_Vt(:,1),PEAK_Vt(:,2),'sb');grid on;hold on;
+
+figure(1000)
+plot(ts,AS,'k',ts,VT,'m');grid on;hold on;
+plot(PEAK_AS_INSP(:,1),PEAK_AS_INSP(:,2),'*b');grid on;hold on;
+plot(PEAK_Vt(:,1),PEAK_Vt(:,2),'sb');grid on;hold on;
+
+%%%%%  Detection of VALLEY's Immediately after the peak of Vt to calculate PARAMETER # 11
+IT = 0; IND1 = 0; IND2 = 0; ERR1 = 1; i = 1;VALLEY_Vt = [0 0]; PARA11 = [0;0]; %% <|================ PARAMETER # 11 %%
+for IT = 1 : 1 : length(PEAK_Vt)
+    IND1 = find(PtsVT(:,1) == PEAK_Vt(IT,1));
+    IND2 = find(PtsVT(IND1,1) <= VtsVT(:,1) & VtsVT(:,1) <= PtsVT(IND1+1,1),1);
+    ERR1 = isempty(IND2);
+    if(ERR1 == 1)
+    else
+        VALLEY_Vt(i,1) = VtsVT(IND2,1);    %% Contains the TIME STAMPS for VALLEYS_Vt for PARAMETER # 11 %%
+        VALLEY_Vt(i,2) = VtsVT(IND2,2);    %% Contains the PEAK AMPLITUDE VALUES for VALLEY_Vt PARAMETER # 11 %%
+        PARA11(i) = PEAK_Vt(IT,2) + abs(VALLEY_Vt(i,2));
+        i = i + 1;
+    end
+end
+%median(PARA11)
+figure(1000)
+plot(VALLEY_Vt(:,1),VALLEY_Vt(:,2),'hk');grid on;hold on;
+plot(VALLEY_Vt(:,1),PARA11,'*y');grid on;hold on;
+
+MtsPARA11 = [VALLEY_Vt(:,1) PARA11];
+
+%**************    To find PARAMETER # 12   ********************%
+[tsintZVT,ampintZVT] = intersections(ts,VT,[0 ts(length(ts),1)],[1e-7 1e-7],1);
+figure(1000)
+plot(tsintZVT,ampintZVT,'xr');grid on;hold on;
+
+IT = 0; IND5 = [0]; i = 1; PARA12 = [0;0]; ERR5 = 1;
+ for IT = 1 : 1 : length(VALLEY_Vt)
+     IND5 = find(VALLEY_Vt(IT,1) <= tsintZVT & tsintZVT <= VALLEY_Vt(IT,1) + 20, 1);
+     ERR5 = isempty(IND2);
+     if(ERR5 == 1)
+     else
+         PARA12(i) = tsintZVT(IND5) - VALLEY_Vt(IT,1);
+         i = i + 1;
+     end 
+ end
+ 
+%%%%         To calculate PARAMETER # 2         %%%% 
+
+IND6 = 0;ERR6 = 1; IT6 = 0; PARA2 = [0;0]; i = 1;
+
+for IT6 = 1 : 1 : length(SEtsPS)
+    IND6 = find(SEtsPS(IT6,1) <= PEAK_AS_INSP(:,1) & PEAK_AS_INSP(:,1) <= SEtsPS(IT6,2)+5, 1);
+    ERR6 = isempty(IND6);
+    if(ERR6 == 1)
+    else
+        PARA2(i) = PEAK_AS_INSP(IND6,1) - SEtsPS(IT6,1);
+        i = i + 1;
+    end
+end
+
+%*******    For PARAMETERS of AIR-FLOW Signal      *******%
+
+figure(1001)
+plot(ts,AS,'k');grid on;hold on;
+plot(PEAK_AS_INSP(:,1),PEAK_AS_INSP(:,2),'*b');grid on;hold on;
+
+thp10 = median(PEAK_AS_INSP(:,2)) * (+0.1);
+
+[tsintthp10AS,ampintthp10AS] = intersections(ts,AS,[0 ts(length(ts),1)],[thp10 thp10],1);
+
+figure(1001)
+plot(tsintthp10AS,ampintthp10AS,'xr');grid on;hold on;
+
+thm10 = median(PEAK_AS_INSP(:,2)) * (-0.1);
+
+[tsintthm10AS,ampintthm10AS] = intersections(ts,AS,[0 ts(length(ts),1)],[thm10 thm10],1);
+
+% figure(1001)
+figure(1)
+plot(tsintthm10AS,ampintthm10AS,'pc');grid on;hold on;
+
+i = 1; IT7 = 0; IND7 = 0; ERR7 = 1; ERR8 = 1; IND8 = 0; PARA9 = [0;0];
+
+for IT7 = 1 : 1: length(PEAK_AS_INSP(:,1))
+    IND7 = find(PEAK_AS_INSP(IT7,1) <= tsintthp10AS & tsintthp10AS <= PEAK_AS_INSP(IT7,1)+3, 1);
+    ERR7 = isempty(IND7);
+    if (ERR7 == 1)
+    else
+        IND8 = find(tsintthp10AS(IND7) <= tsintthm10AS & tsintthm10AS <= tsintthp10AS(IND7)+3, 1);
+        ERR8 = isempty(IND8);
+    if (ERR8 == 1)
+    else
+        PARA9(i) =  tsintthm10AS(IND8) - tsintthp10AS(IND7);
+        i = i + 1;
+    end
+    end
+end
+
+[tsintZAS,ampintZAS] = intersections(ts,AS,[0 ts(length(ts),1)],[1e-7 1e-7],1);
+%figure(1001)
+figure(1)
+plot(tsintZAS,ampintZAS,'xb');grid on;hold on;       
+
+%*********       TO FIND PARA # 1       **********%
+i = 1; IT8 = 0; IND3 = 0;ERR3 = 1; IND4 = 0;ERR4 = 1; IND5 = 0;ERR5 = 1; plotPARA1 = [0 0;0 0]; PARA1 = [0;0];
+
+for IT8 = 1 : 1 : length(PEAK_AS_INSP(:,1))
+    IND3 = find(PEAK_AS_INSP(IT8,1) > SEtsPS(:,1) & SEtsPS(:,1) > PEAK_AS_INSP(IT8,1) - 6, 1,'last');
+    ERR3 = isempty(IND3);
+    if(ERR3 == 1)
+    else
+        IND4 = find(0.5 + SEtsPS(IND3,1) > VtsAS(:,1) & VtsAS(:,1) > SEtsPS(IND3,1)-6,1,'last');
+        ERR4 = isempty(IND4);
+        if(ERR4 == 1)
+        else
+            IND5 = find(VtsAS(IND4,1) > tsintZAS & tsintZAS > VtsAS(IND4,1)-3,1,'last');
+            ERR5 = isempty(IND5);
+            if(ERR5 == 1)
+            else
+                plotPARA1(i,1) = tsintZAS(IND5);
+                plotPARA1(i,2) = 0;
+                PARA1(i) = SEtsPS(IND3,1) - tsintZAS(IND5,1);
+                i = i + 1;
+            end
+        end
+    end
+end
+
+figure(1);
+plot(plotPARA1(:,1),plotPARA1(:,2),'*y');grid on; hold on;
+
+%*********        To calculate PARAMETER # 3       **********% 
+
+IND9 = 0;ERR9 = 1; IND0 = 0;ERR0 = 1; IT9 = 0; PARA3 = [0;0]; i = 1; plotP3 = [0 0;0 0];
+for IT9 = 1 : 1 : length(PEAK_AS_INSP(:,1))
+    IND9 = find(PEAK_AS_INSP(IT9,1) > SEtsPS(:,1) & SEtsPS(:,1) > PEAK_AS_INSP(IT9,1)-6,1,'last');
+    ERR9 = isempty(IND9);
+    if(ERR9 == 1)
+    else
+        IND0 = find(SEtsPS(IND9,1) < tsintthp10AS & tsintthp10AS < PEAK_AS_INSP(IT9,1),1,'last');
+        ERR0 = isempty(IND0);
+        if(ERR0 == 1)
+        else
+            PARA3(i) = tsintthp10AS(IND0) - SEtsPS(IND9,1);
+            plotP3(i,1) = tsintthp10AS(IND0);
+            plotP3(i,2) = ampintthp10AS(IND0);
+            i = i + 1;
+        end
+    end
+end
+
+figure(1);
+plot(plotP3(:,1),plotP3(:,2),'pk');grid on; hold on;
+
+% *****       To find PARA # 8 & PARA # 10      ***** %
+
+IT = 0; IND1 = 0; IND2 = 0;ERR2 = 1; IND3 = 0;ERR3 = 1; i1 = 1; i2 = 1; IND4 = 0;ERR4 = 1; PARA8 = [0;0]; PARA10 = [0;0];
+
+for IT = 1 : 1 : length(PEAK_AS_INSP(:,1))
+    IND1 = find(PEAK_AS_INSP(IT,1) == LpAS);
+    PEAK_AS_INSP2 = LpAS(IND1 + 1);
+    IND2 = find(PEAK_AS_INSP(IT,1) > SEtsPS(:,2) & SEtsPS(:,2) > PEAK_AS_INSP(IT,1) - 6,1,'last');
+    ERR2 = isempty(IND2);
+    if(ERR2 == 1)
+    else
+        IND3 = find(PEAK_AS_INSP(IT,1) < tsintthm10AS & tsintthm10AS < PEAK_AS_INSP2,1);
+        ERR3 = isempty(IND3);
+        if(ERR3 == 1)
+        else
+            PARA8(i1) = tsintthm10AS(IND3) - SEtsPS(IND2,2);
+            i1 = i1 + 1;
+            IND4 = find(PEAK_AS_INSP(IT,1) < tsintZAS & tsintZAS < PEAK_AS_INSP2,1,'last');
+            ERR4 = isempty(IND4);
+            if(ERR4 == 1)
+            else
+                PARA10(i2) = tsintZAS(IND4) - tsintthm10AS(IND3);
+                i2 = i2 + 1;
+            end
+            
+        end
+    end
+end
+
+%*****    PLOTING THE MANUAL SCORE     *****%
+
+pl1 = length(Score(:,3));pl2 = length(Score(:,4));
+zpl1 = zeros(pl1,1);zpl2 = zeros(pl2,1);
+plot(Score(:,3),zpl1,'hk',Score(:,4),zpl2,'hk');grid on; hold on;
+
+
+
+
+
+
+

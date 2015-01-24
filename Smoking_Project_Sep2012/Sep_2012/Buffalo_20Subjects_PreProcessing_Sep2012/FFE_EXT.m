@@ -1,0 +1,597 @@
+%************************************************************************%
+%*******            Final Code for Feature_Extraction              ******%
+%************************************************************************%
+
+clc;clear all; close all;
+sf=101.73; 
+H=1;oo = 10;
+list = char('sub_003','sub_004','sub_005','sub_006','sub_007','sub_008','sub_009','sub_010','sub_011','sub_012','sub_013','sub_014','sub_015','sub_016','sub_017','sub_019','sub_020','sub_021','sub_022','sub_023');
+s = size(list,1);
+I = 6;   %% Iteration for subject (here, 1 <= I <= 20) %%
+
+while(I <= s)
+    hamp = 1:4:400; ha = 1;  %% indices for the structure %%
+    load(strcat(list(I,1),list(I,2),list(I,3),list(I,4),list(I,5),list(I,6),list(I,7),'.mat'))
+    clear ('L','ts');
+    L = length(Data); ts = [1:L]/sf; ts = ts'; ts = ts-Activities(1,2);
+    
+    clear ('Z','Z1','Z2');
+    Z = zeros(L,1); Z1 = zeros(L,1); Z2 = zeros(L,1);
+    
+    clear ('ind1','ind2');
+    ind1 = find(Activities(11,1)- 126 <= ts & ts <= Activities(11,2) + 126); Z(ind1) = 1; Z1(ind1) = 1;
+    
+    ind2 = find(Activities(13,1) - 126 <= ts & ts <= Activities(13,2) + 126); Z(ind2) = 1; Z2(ind2) = 1;
+    clear ('PB','PS31','ind0','PS');    
+    PB = (Data(:,1))/max(Data(:,1)); PB = PB .* Z;
+    
+    PS31 = (Data(:,2))/max(Data(:,2)); PS31 = PS31.* Z; 
+    PS = merge_function1(PS31,ts,0.046,0.5,8,1.2);
+    %ind0 = find(PS1 >= 0.046); clear 'PS1';      
+    %clear ('PS','PS2');
+    %PS2 = zeros(L,1); PS2(ind0) = 1; 
+    %PS = merge_func(ts,PS2,1.2); % merging of close pulses
+    figure(1)
+    %plot(ts,PS,'r');hold on;grid on;
+    clear ('ASa','RC','AB','VT1','ind3','nvt1','Mvt');
+    ASa = (Data(:,3))/max(Data(:,3)); 
+    RC = (Data(:,4))/max(Data(:,4));
+    AB = (Data(:,5))/max(Data(:,5));
+    
+    RC = RC .* Z; AB = AB .* Z; VT1 = (AB + RC)/2;
+    
+    ind3 = find(VT1 > 0); nvt1 = length(ind3); Mvt = (sum(VT1))/nvt1;  %% Procedure to find the mean-value %%
+    
+    clear ('VT','AS');
+    VT = VT1 - Mvt; VT = -1 * VT; VT = VT + Mvt; VT = VT .* Z;   %% Inverted VT signal %%
+    
+    VT = idealfilter(VT,0.1,1000,sf); VT = VT .* Z;
+    VT = fastsmooth(VT,45,1,0); 
+    ts1 = ts .* Z; 
+    
+    AS = diff(VT)./diff(ts1);
+    AS = [AS;0];
+    
+    for i1 = 1:1:L
+        if (Z(i1,1) == 0)
+            AS(i1,1) = 0;
+        else
+            AS(i1,1) = AS(i1,1);
+        end
+    end
+    
+    AS = fastsmooth(AS,45,1,0);
+    
+    clear ('LpVT','MpVT','LvVT','MvVT','LpAS','MpAS','LvAS','MvAS');
+    [LpVT,MpVT] = peakfinder(VT,0.0099,-0.02,1);
+    LpVT = LpVT/sf;
+    LpVT = LpVT-(Activities(1,2));
+    
+    [LvVT,MvVT] = peakfinder(VT,0.0099,0.02,-1);
+    LvVT = LvVT/sf;
+    LvVT = LvVT-(Activities(1,2));    
+    
+    [LpAS,MpAS] = peakfinder(AS,0.0099,-0.02,1);
+    LpAS = LpAS/sf;
+    LpAS = LpAS-(Activities(1,2));
+    
+    [LvAS,MvAS] = peakfinder(AS,0.0099,0.02,-1);
+    LvAS = LvAS/sf;
+    LvAS = LvAS-(Activities(1,2));
+    % =============== PLOTS ======================= %
+    plot(ts,AS,'b');hold on; grid on;     % AS signal %
+    %plot(LpAS,MpAS,'+m');grid on;hold on; % Peaks for AS signal %
+    %plot(LvAS,MvAS,'+r');grid on;hold on; % Valleys for AS signal %
+    
+    plot(ts,VT,'k');hold on; grid on;     % VT signal %
+    %plot(LpVT,MpVT,'om');grid on;hold on; % Peaks for VT signal %
+    %plot(LvVT,MvVT,'or');grid on;hold on; % Valleys for VT signal %
+    % ============================================ %
+    clear ('PS5','PS6');
+    PS5 = PS.*Z1;
+    [inttsPS1,y111] = intersections(ts,PS5,[0 ts(length(ts),1)],[0.1 0.1],1);
+    
+    PS6 = PS.*Z2;
+    [inttsPS2,y112] = intersections(ts,PS6,[0 ts(length(ts),1)],[0.1 0.1],1);
+    
+    clear ('err1int','err2int');
+    err1int = mod(length(inttsPS1),2);
+    if err1int == 0
+    else
+        disp('Error in INTERSECTION of Proximity Sensor (Sittiing PART)with Thres (ODD #)');
+        stop;    
+    end
+    
+    err2int = mod(length(inttsPS2),2);
+    if err2int == 0
+    else
+        disp('Error in INTERSECTION of Proximity Sensor (Standing PART) with Thres (ODD #)');
+        stop;
+    end
+    
+    clear ('SORTtsPS1','SORTtsPS2','SEtsPS','EtsPS');
+    SORTtsPS1(:,1) = inttsPS1(1:2:(length(inttsPS1))); %%START in Column 1 
+    SORTtsPS1(:,2) = inttsPS1(2:2:(length(inttsPS1))); %%END in Column 2
+    
+    SORTtsPS2(:,1) = inttsPS2(1:2:(length(inttsPS2))); %%START in Column 1
+    SORTtsPS2(:,2) = inttsPS2(2:2:(length(inttsPS2))); %%END in Column 2
+    
+    SEtsPS = cat(1,SORTtsPS1,SORTtsPS2); %% Contains time stamps for START && END of PS 
+    EtsPS = cat(1,SORTtsPS1(:,2),SORTtsPS2(:,2));  %% Contains only time stamp for END of PS 
+    
+    clear ('PtsVT','VtsVT','PtsAS','VtsAS');
+    %*************  IMPORTANT MATRICES FOR VT SIGNALS **************%
+    PtsVT = [LpVT MpVT]; VtsVT = [LvVT MvVT]; 
+    %*************  IMPORTANT MATRICES FOR AS SIGNALS **************%
+    PtsAS = [LpAS MpAS]; VtsAS = [LvAS MvAS];
+    %***************************************************************%
+    
+    IT = 0; IND = 0; i = 1; %======== To calculate median of AS +-10% Threshold "Roughly" 
+    PEAK_AS_INSP = [0 0];
+    for IT = 1 : 1 : length(EtsPS)
+        IND = find(EtsPS(IT)-0.15 <= LpAS   & LpAS <= EtsPS(IT)+ 3.1,1); 
+        ERR1 = isempty(IND);
+        if(ERR1 == 1)
+        else
+            PEAK_AS_INSP(i,1) = PtsAS(IND,1);    %% Contains the TIME STAMPS for PEAK_AS_INSP PARAMETER
+            PEAK_AS_INSP(i,2) = PtsAS(IND,2);    %% Contains the PEAK AMPLITUDE VALUES for PEAK_AS_INSP PARAMETER
+            i = i + 1;
+        end
+    end
+    clear 'IND'
+    %+++++++++++++++ POSITIVE 10% MEDIAN THRESHOLD ++++++++++++++++++%
+    clear ('thp10','tsintthp10AS','ampintthp10AS','tsintthm10AS','ampintthm10AS','tsintZVT','ampintZVT','tsintZAS','ampintZAS');
+    thp10 = median(PEAK_AS_INSP(:,2)) * ( + 0.1);
+    [tsintthp10AS,ampintthp10AS] = intersections(ts,AS,[0 ts(length(ts),1)],[thp10 thp10],1);
+    %--------------- NEGATIVE 10% MEDIAN THRESHOLD ------------------%
+    thm10 = median(PEAK_AS_INSP(:,2)) * ( - 0.1);
+    [tsintthm10AS,ampintthm10AS] = intersections(ts,AS,[0 ts(length(ts),1)],[thm10 thm10],1);
+    %============= INTERSECTION of ZERO line with VT ==============%
+    [tsintZVT,ampintZVT] = intersections(ts,VT,[0 ts(length(ts),1)],[1e-7 1e-7],1); 
+    %============= INTERSECTION of ZERO line with AS ==============%
+    [tsintZAS,ampintZAS] = intersections(ts,AS,[0 ts(length(ts),1)],[1e-7 1e-7],1); 
+    
+    % ============= Plots for Manual Scoring ============ %
+    pl1 = length(Score(:,3));pl2 = length(Score(:,4));
+    zpl1 = 0.23*ones(pl1,1);zpl2 = 0.23*ones(pl2,1);
+    plot(Score(:,3),zpl1,'or',Score(:,4),zpl2,'ob');grid on; hold on;
+    % =================================================== %
+    NHG = length(SEtsPS);fprintf('Number of Hand Gestures = %d',NHG);
+    %H = 1; oo=10;
+    while(H <= length(SEtsPS) && oo == 10)
+    %while(H <= length(SEtsPS))
+        %***********  PARA # 4  ***************%
+        S(I).h(hamp(ha),4) = SEtsPS(H,2) - SEtsPS(H,1); % amplitude %
+        subj(I).hg(H,4) = S(I).h(hamp(ha),4);
+        S(I).h(hamp(ha) + 1,4) = SEtsPS(H,1);   % Start Time %
+        S(I).h(hamp(ha) + 2,4) = SEtsPS(H,2);   % End Time %
+        S(I).h(hamp(ha) + 3,4) = 0;   % Error %
+        
+        %**********  PARA # 14  ***************%
+        ps14 = Data(:,2)/max(Data(:,2));
+        ind14 = find(SEtsPS(H,1) <= ts & ts <= SEtsPS(H,2));
+        ps141 = zeros(length(ts),1);
+        ps141(ind14) = 1;
+        ps142 = ps14 .* ps141;
+        s14 = sum(ps142);
+        l14 = length(ind14);
+        mean14 = s14/l14;  %===== mean amplitude of PS for the given HG ======%
+        S(I).h(hamp(ha),14) = mean14; % amplitude %
+        subj(I).hg(H,14) = S(I).h(hamp(ha),14);
+        S(I).h(hamp(ha) + 1,14) = SEtsPS(H,1);   % Start Time %
+        S(I).h(hamp(ha) + 2,14) = SEtsPS(H,2);   % End Time %
+        S(I).h(hamp(ha) + 3,14) = 0;   % Error %
+        
+        %**********  PARA # 6  ***************%
+        ind6 = find(EtsPS(H) - 0.25 <= LpAS & LpAS <= EtsPS(H) + 25,1);
+        err6 = isempty(ind6);
+        if(err6 == 0) %% the "end" and "else" for this "if" is in FFE_EXT_Part2
+            S(I).h(hamp(ha),6) = PtsAS(ind6,2); % amplitude %
+            subj(I).hg(H,6) = S(I).h(hamp(ha),6);
+            S(I).h(hamp(ha) + 1,6) = SEtsPS(H,1);   % Start Time %
+            S(I).h(hamp(ha) + 2,6) = PtsAS(ind6,1);   % End Time %
+            S(I).h(hamp(ha) + 3,6) = err6;   % Error %
+            
+            %************ PARA # 5 ************%
+            ind5 = find(S(I).h(hamp(ha) + 2,6) <= LpVT & LpVT <= S(I).h(hamp(ha) + 2,6) + 25,1);
+            err5 = isempty(ind5);
+            if(err5 == 0) 
+                S(I).h(hamp(ha),5) = PtsVT(ind5,2); % amplitude %
+                subj(I).hg(H,5) = S(I).h(hamp(ha),5);
+                S(I).h(hamp(ha) + 1,5) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,5) = PtsVT(ind5,1);   % End Time %
+                S(I).h(hamp(ha) + 3,5) = err5;   % Error %
+            else
+                S(I).h(hamp(ha),5) = 0; % amplitude %
+                subj(I).hg(H,5) = S(I).h(hamp(ha),5);
+                S(I).h(hamp(ha) + 1,5) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,5) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,5) = err5;   % Error %
+            end
+            
+            % ************ PARA # 11 ************ %
+            ind11 = find(S(I).h(hamp(ha) + 2,5) <= LvVT & LvVT <= S(I).h(hamp(ha) + 2,5) + 25,1);
+            err11 = isempty(ind11);
+            if(err11 == 0)
+                S(I).h(hamp(ha),11) = VtsVT(ind11,2); % amplitude %
+                subj(I).hg(H,11) = S(I).h(hamp(ha),11);
+                S(I).h(hamp(ha) + 1,11) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,11) = VtsVT(ind11,1);   % End Time %
+                S(I).h(hamp(ha) + 3,11) = err11;   % Error %
+            else
+                S(I).h(hamp(ha),11) = 0; % amplitude %
+                subj(I).hg(H,11) = S(I).h(hamp(ha),11);
+                S(I).h(hamp(ha) + 1,11) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,11) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,11) = err11;   % Error %
+            end
+            
+            % ************ PARA # 13 ************ %
+            ind13 = find(S(I).h(hamp(ha) + 2,6) <= LvAS & LvAS <= S(I).h(hamp(ha) + 2,6) + 25,1);
+            err13 = isempty(ind13);
+            if(err13 == 0)
+                S(I).h(hamp(ha),13) = VtsAS(ind13,2); % amplitude %
+                subj(I).hg(H,13) = S(I).h(hamp(ha),13);
+                S(I).h(hamp(ha) + 1,13) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,13) = VtsAS(ind13,1);   % End Time %
+                S(I).h(hamp(ha) + 3,13) = err13;   % Error %
+            else
+                S(I).h(hamp(ha),13) = 0; % amplitude %
+                subj(I).hg(H,13) = S(I).h(hamp(ha),13);
+                S(I).h(hamp(ha) + 1,13) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,13) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,13) = err13;   % Error %
+            end
+            
+            % ************* PARA # 12 *********** %
+            ind12 = find(S(I).h(hamp(ha) + 2,11) <= tsintZVT & tsintZVT <= S(I).h(hamp(ha) + 2,11) + 25,1);
+            err12 = isempty(ind12);
+            if(err12 == 0)
+                S(I).h(hamp(ha),12) = tsintZVT(ind12) - S(I).h(hamp(ha)+2,11); % amplitude %
+                subj(I).hg(H,12) = S(I).h(hamp(ha),12);
+                S(I).h(hamp(ha) + 1,12) = S(I).h(hamp(ha)+2,11);   % Start Time %
+                S(I).h(hamp(ha) + 2,12) = tsintZVT(ind12);   % End Time %
+                S(I).h(hamp(ha) + 3,12) = err13;   % Error %
+            else
+                S(I).h(hamp(ha),12) = 0; % amplitude %
+                subj(I).hg(H,12) = S(I).h(hamp(ha),12);
+                S(I).h(hamp(ha) + 1,12) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,12) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,12) = err12;   % Error %
+            end
+            
+            % ************** PARA # 09 ************ %
+            ind9a = find(S(I).h(hamp(ha)+2,6) <= tsintthp10AS & tsintthp10AS <= S(I).h(hamp(ha)+2,6) + 25,1);
+            err9a = isempty(ind9a);            
+            if(err9a == 0)
+                ind9b = find(S(I).h(hamp(ha)+2,6) <= tsintthm10AS & tsintthm10AS <= S(I).h(hamp(ha)+2,6) + 25,1);
+                err9b = isempty(ind9b);
+                if(err9b == 0)
+                    S(I).h(hamp(ha),9) = tsintthm10AS(ind9b) - tsintthp10AS(ind9a);
+                    subj(I).hg(H,9) = S(I).h(hamp(ha),9);
+                    S(I).h(hamp(ha)+ 1,9) = tsintthp10AS(ind9a);
+                    S(I).h(hamp(ha)+ 2,9) = tsintthm10AS(ind9b);
+                    S(I).h(hamp(ha)+ 3,9) = err9a + err9b;
+                else
+                    S(I).h(hamp(ha),9) = 0;
+                    subj(I).hg(H,9) = S(I).h(hamp(ha),9);
+                    S(I).h(hamp(ha)+ 1,9) = SEtsPS(H,1);
+                    S(I).h(hamp(ha)+ 2,9) = SEtsPS(H,2);
+                    S(I).h(hamp(ha)+ 3,9) = err9a;
+                end
+            else
+                S(I).h(hamp(ha),9) = 0;
+                subj(I).hg(H,9) = S(I).h(hamp(ha),9);
+                S(I).h(hamp(ha)+ 1,9) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+ 2,9) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+ 3,9) = err9a;
+            end
+            
+            % ************* PARA # 10 ************* %
+            ind10 = find(S(I).h(hamp(ha)+2,9) <= tsintZAS & tsintZAS >= S(I).h(hamp(ha)+2,9),1);
+            err10 = isempty(ind10);
+            if(err10 == 0)
+                S(I).h(hamp(ha),10) = tsintZAS(ind10) - S(I).h(hamp(ha)+2,9);
+                subj(I).hg(H,10) = S(I).h(hamp(ha),10);
+                S(I).h(hamp(ha)+1,10) = S(I).h(hamp(ha)+2,9);
+                S(I).h(hamp(ha)+2,10) = tsintZAS(ind10);
+                S(I).h(hamp(ha)+3,10) = err10;
+            else
+                S(I).h(hamp(ha),10) = 0;
+                subj(I).hg(H,10) = S(I).h(hamp(ha),10);
+                S(I).h(hamp(ha)+ 1,10) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+ 2,10) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+ 3,10) = err10;
+            end
+            
+            %**********  PARA # 02  ***************%
+            S(I).h(hamp(ha),2) = S(I).h(hamp(ha)+2,6) - SEtsPS(H,1);
+            subj(I).hg(H,2) = S(I).h(hamp(ha),2);
+            S(I).h(hamp(ha)+ 1,2) = SEtsPS(H,1);
+            S(I).h(hamp(ha)+ 2,2) = S(I).h(hamp(ha)+2,6);
+            S(I).h(hamp(ha)+ 3,2) = 0;
+            
+            %**********  PARA # 08  ***************%
+            S(I).h(hamp(ha),8) = S(I).h(hamp(ha)+2,9) - EtsPS(H);
+            subj(I).hg(H,8) = S(I).h(hamp(ha),8);
+            S(I).h(hamp(ha)+ 1,8) = EtsPS(H);
+            S(I).h(hamp(ha)+ 2,8) = S(I).h(hamp(ha)+2,9);
+            S(I).h(hamp(ha)+ 3,8) = err9b;
+            
+            %**********  PARA # 03  ***************%
+            ind3 = find(SEtsPS(H,1) <= tsintthp10AS & tsintthp10AS <= S(I).h(hamp(ha)+2,6),1,'last');
+            err3 = isempty(ind3);
+            if(err3 == 0)
+                S(I).h(hamp(ha),3) = tsintthp10AS(ind3) - SEtsPS(H,1);
+                subj(I).hg(H,3) = S(I).h(hamp(ha),3);
+                S(I).h(hamp(ha)+1,3) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+2,3) = tsintthp10AS(ind3);
+                S(I).h(hamp(ha)+3,3) = err3;
+            else
+                S(I).h(hamp(ha),3) = 0;
+                subj(I).hg(H,3) = S(I).h(hamp(ha),3);
+                S(I).h(hamp(ha)+ 1,3) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+ 2,3) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+ 3,3) = err3;
+            end
+            
+            %**********  PARA # 07  ***************%
+            if(err3 == 0 && err9b == 0)
+                S(I).h(hamp(ha),7) = tsintthm10AS(ind9b) - tsintthp10AS(ind3);
+                subj(I).hg(H,7) = S(I).h(hamp(ha),7);
+                S(I).h(hamp(ha)+1,7) = tsintthp10AS(ind3);
+                S(I).h(hamp(ha)+2,7) = tsintthm10AS(ind9b);
+                S(I).h(hamp(ha)+3,7) = err9b;
+            else
+                S(I).h(hamp(ha),7) = 0;
+                subj(I).hg(H,7) = S(I).h(hamp(ha),7);
+                S(I).h(hamp(ha)+1,7) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+2,7) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+3,7) = err9b;
+            end
+            
+            %**********  PARA # 01  ***************%
+            ind1a = find(SEtsPS(H,1) >= LvAS & LvAS >= SEtsPS(H,1) - 25,1,'last');
+            err1a = isempty(ind1a);
+            if(err1a == 0)
+                ind1b = find(VtsAS(ind1a) >= tsintZAS & tsintZAS >= VtsAS(ind1a) - 25,1,'last');
+                err1b = isempty(ind1b);
+                if(err1b == 0)
+                    S(I).h(hamp(ha),1) = SEtsPS(H,1) - tsintZAS(ind1b);
+                    subj(I).hg(H,1) = S(I).h(hamp(ha),1);
+                    S(I).h(hamp(ha)+1,1) = tsintZAS(ind1b);
+                    S(I).h(hamp(ha)+2,1) = SEtsPS(H,1);
+                    S(I).h(hamp(ha)+3,1) = err1b;
+                else
+                    S(I).h(hamp(ha),1) = 0;
+                    subj(I).hg(H,1) = S(I).h(hamp(ha),1);
+                    S(I).h(hamp(ha)+1,1) = SEtsPS(H,1);
+                    S(I).h(hamp(ha)+2,1) = SEtsPS(H,2);
+                    S(I).h(hamp(ha)+3,1) = err1a + err1b;
+                end
+            else
+                S(I).h(hamp(ha),1) = 0;
+                subj(I).hg(H,1) = S(I).h(hamp(ha),1);
+                S(I).h(hamp(ha)+1,1) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+2,1) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+3,1) = err1a;
+            end
+            
+        else%%% Else statement for problem # 6
+            S(I).h(hamp(ha),6) = 0; % amplitude %
+            subj(I).hg(H,6) = S(I).h(hamp(ha),6);
+            S(I).h(hamp(ha) + 1,6) = SEtsPS(H,1);   % Start Time %
+            S(I).h(hamp(ha) + 2,6) = SEtsPS(H,2);   % End Time %
+            S(I).h(hamp(ha) + 3,6) = err6;   % Error %
+            
+            %**********  PARA # 05  ***************%
+            ind51 = find(EtsPS(H) <= LpVT & LpVT <= EtsPS(H) + 25,1);
+            err51 = isempty(ind51);
+            if(err51 == 0)
+                S(I).h(hamp(ha),5) = PtsVT(ind51,2); % amplitude %
+                subj(I).hg(H,5) = S(I).h(hamp(ha),5);
+                S(I).h(hamp(ha) + 1,5) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,5) = PtsVT(ind51,1);   % End Time %
+                S(I).h(hamp(ha) + 3,5) = err5;   % Error %
+            else
+                S(I).h(hamp(ha),5) = 0; % amplitude %
+                subj(I).hg(H,5) = S(I).h(hamp(ha),5);
+                S(I).h(hamp(ha) + 1,5) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,5) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,5) = err5;   % Error %
+            end
+            
+            %**********  PARA # 11  ***************%
+            ind111 = find(EtsPS(H) <= LvVT & LvVT <= EtsPS(H) + 25,1);
+            err111 = isempty(ind111);
+            if(err111 == 0)
+                S(I).h(hamp(ha),11) = VtsVT(ind111,2); % amplitude %
+                subj(I).hg(H,11) = S(I).h(hamp(ha),11);
+                S(I).h(hamp(ha) + 1,11) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,11) = VtsVT(ind111,1);   % End Time %
+                S(I).h(hamp(ha) + 3,11) = err111;   % Error %
+            else
+                S(I).h(hamp(ha),11) = 0; % amplitude %
+                subj(I).hg(H,11) = S(I).h(hamp(ha),11);
+                S(I).h(hamp(ha) + 1,11) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,11) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,11) = err111;   % Error %
+            end
+            
+            %**********  PARA # 13  ***************%
+            ind131 = find(EtsPS(H) <= LvAS & LvAS <= EtsPS(H) + 25,1);
+            err131 = isempty(ind131);
+            if(err131 == 0)
+                S(I).h(hamp(ha),13) = VtsAS(ind131,2); % amplitude %
+                subj(I).hg(H,13) = S(I).h(hamp(ha),13);
+                S(I).h(hamp(ha) + 1,13) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,13) = VtsVT(ind131,1);   % End Time %
+                S(I).h(hamp(ha) + 3,13) = err131;   % Error %
+            else
+                S(I).h(hamp(ha),13) = 0; % amplitude %
+                subj(I).hg(H,13) = S(I).h(hamp(ha),13);
+                S(I).h(hamp(ha) + 1,13) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,13) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,13) = err131;   % Error %
+            end
+            
+            %**********  PARA # 12  ***************%
+            ind121 = find(EtsPS(H)+3 <= tsintZVT & tsintZVT <= EtsPS(H) + 25,1);
+            err121 = isempty(ind121);
+            if(err121 == 0)
+                S(I).h(hamp(ha),12) = tsintZVT(ind121) - S(I).h(hamp(ha)+2,11); % amplitude %
+                subj(I).hg(H,12) = S(I).h(hamp(ha),12);
+                S(I).h(hamp(ha) + 1,12) = S(I).h(hamp(ha)+2,11);   % Start Time %
+                S(I).h(hamp(ha) + 2,12) = tsintZVT(ind121);   % End Time %
+                S(I).h(hamp(ha) + 3,12) = err121;   % Error %
+            else
+                S(I).h(hamp(ha),12) = 0; % amplitude %
+                subj(I).hg(H,12) = S(I).h(hamp(ha),12);
+                S(I).h(hamp(ha) + 1,12) = SEtsPS(H,1);   % Start Time %
+                S(I).h(hamp(ha) + 2,12) = SEtsPS(H,2);   % End Time %
+                S(I).h(hamp(ha) + 3,12) = err121;   % Error %
+            end
+            
+            %**********  PARA # 09  ***************%
+            ind9a1 = find(EtsPS(H) <= tsintthp10AS & tsintthp10AS <= EtsPS(H) + 25,1);
+            err9a1 = isempty(ind9a1);           
+            if(err9a1 == 0)
+                ind9b1 = find(EtsPS(H) <= tsintthm10AS & tsintthm10AS <= EtsPS(H) + 25,1);
+                err9b1 = isempty(ind9b1);
+                if(err9b1 == 0)
+                    S(I).h(hamp(ha),9) = tsintthm10AS(ind9b1) - tsintthp10AS(ind9a1);
+                    subj(I).hg(H,9) = S(I).h(hamp(ha),9);
+                    S(I).h(hamp(ha)+ 1,9) = tsintthp10AS(ind9a1);
+                    S(I).h(hamp(ha)+ 2,9) = tsintthm10AS(ind9b1);
+                    S(I).h(hamp(ha)+ 3,9) = err9a1 + err9b1;
+                else
+                    S(I).h(hamp(ha),9) = 0;
+                    subj(I).hg(H,9) = S(I).h(hamp(ha),9);
+                    S(I).h(hamp(ha)+ 1,9) = SEtsPS(H,1);
+                    S(I).h(hamp(ha)+ 2,9) = SEtsPS(H,2);
+                    S(I).h(hamp(ha)+ 3,9) = err9a1 + err9b1;
+                end
+            else
+                S(I).h(hamp(ha),9) = 0;
+                subj(I).hg(H,9) = S(I).h(hamp(ha),9);
+                S(I).h(hamp(ha)+ 1,9) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+ 2,9) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+ 3,9) = err9a1;
+            end
+            
+            %**********  PARA # 10  ***************%
+            ind101 = find(EtsPS(H)+2 <= tsintZAS & tsintZAS <= EtsPS(H)+25,1);
+            err101 = isempty(ind101);
+            if(err101 == 0)
+                S(I).h(hamp(ha),10) = tsintZAS(ind101) - S(I).h(hamp(ha)+2,9);
+                subj(I).hg(H,10) = S(I).h(hamp(ha),10);
+                S(I).h(hamp(ha)+1,10) = S(I).h(hamp(ha)+2,9);
+                S(I).h(hamp(ha)+2,10) = tsintZAS(ind101);
+                S(I).h(hamp(ha)+3,10) = err101;
+            else
+                S(I).h(hamp(ha),10) = 0;
+                subj(I).hg(H,10) = S(I).h(hamp(ha),10);
+                S(I).h(hamp(ha)+ 1,10) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+ 2,10) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+ 3,10) = err10;
+            end
+            
+            %**********  PARA # 02  ***************%
+            S(I).h(hamp(ha),2) = S(I).h(hamp(ha)+2,6) - SEtsPS(H,1);
+            subj(I).hg(H,2) = S(I).h(hamp(ha),2);
+            S(I).h(hamp(ha)+ 1,2) = SEtsPS(H,1);
+            S(I).h(hamp(ha)+ 2,2) = S(I).h(hamp(ha)+2,6);
+            S(I).h(hamp(ha)+ 3,2) = err6;
+            
+            %**********  PARA # 08  ***************%
+            S(I).h(hamp(ha),8) = S(I).h(hamp(ha)+2,9) - EtsPS(H);
+            subj(I).hg(H,8) = S(I).h(hamp(ha),8);
+            S(I).h(hamp(ha)+ 1,8) = EtsPS(H);
+            S(I).h(hamp(ha)+ 2,8) = S(I).h(hamp(ha)+2,9);
+            S(I).h(hamp(ha)+ 3,8) = err9b1;
+            
+            %**********  PARA # 03  ***************%
+            ind31 = find(SEtsPS(H,1)+1 <= tsintthp10AS & tsintthp10AS <= S(I).h(hamp(ha)+2,6),1,'last');
+            err31 = isempty(ind31);
+            if(err31 == 0)
+                S(I).h(hamp(ha),3) = tsintthp10AS(ind31) - SEtsPS(H,1);
+                subj(I).hg(H,3) = S(I).h(hamp(ha),3);
+                S(I).h(hamp(ha)+1,3) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+2,3) = tsintthp10AS(ind31);
+                S(I).h(hamp(ha)+3,3) = err31;
+            else
+                S(I).h(hamp(ha),3) = 0;
+                subj(I).hg(H,3) = S(I).h(hamp(ha),3);
+                S(I).h(hamp(ha)+ 1,3) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+ 2,3) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+ 3,3) = err31;
+            end
+            
+            %**********  PARA # 07  ***************%
+            if(err31 == 0 && err9b1 == 0)
+                S(I).h(hamp(ha),7) = tsintthm10AS(ind9b1) - tsintthp10AS(ind31);
+                subj(I).hg(H,7) = S(I).h(hamp(ha),7);
+                S(I).h(hamp(ha)+1,7) = tsintthp10AS(ind31);
+                S(I).h(hamp(ha)+2,7) = tsintthm10AS(ind9b1);
+                S(I).h(hamp(ha)+3,7) = err9b1;
+            else
+                S(I).h(hamp(ha),7) = 0;
+                subj(I).hg(H,7) = S(I).h(hamp(ha),7);
+                S(I).h(hamp(ha)+1,7) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+2,7) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+3,7) = err9b1;
+            end
+            
+            %**********  PARA # 01  ***************%
+            ind1a1 = find(SEtsPS(H,1) >= LvAS & LvAS >= SEtsPS(H,1) - 25,1,'last');
+            err1a1 = isempty(ind1a1);
+            if(err1a1 == 0)
+                ind1b1 = find(VtsAS(ind1a1) >= tsintZAS & tsintZAS >= VtsAS(ind1a1) - 25,1,'last');
+                err1b1 = isempty(ind1b1);
+                if(err1b1 == 0)
+                    S(I).h(hamp(ha),1) = SEtsPS(H,1) - tsintZAS(ind1b1);
+                    subj(I).hg(H,1) = S(I).h(hamp(ha),1);
+                    S(I).h(hamp(ha)+1,1) = tsintZAS(ind1b1);
+                    S(I).h(hamp(ha)+2,1) = SEtsPS(H,1);
+                    S(I).h(hamp(ha)+3,1) = err1b1;
+                else
+                    S(I).h(hamp(ha),1) = 0;
+                    subj(I).hg(H,1) = S(I).h(hamp(ha),1);
+                    S(I).h(hamp(ha)+1,1) = SEtsPS(H,1);
+                    S(I).h(hamp(ha)+2,1) = SEtsPS(H,2);
+                    S(I).h(hamp(ha)+3,1) = err1a1+err1b1;
+                end
+            else
+                S(I).h(hamp(ha),1) = 0;
+                subj(I).hg(H,1) = S(I).h(hamp(ha),1);
+                S(I).h(hamp(ha)+1,1) = SEtsPS(H,1);
+                S(I).h(hamp(ha)+2,1) = SEtsPS(H,2);
+                S(I).h(hamp(ha)+3,1) = err1a1;
+            end
+                        
+        end%%%end for Paramter 6 problem
+        SS(I).L(H,1) = 1; %<==================== Label Assignment %%
+        plot([S(I).h(hamp(ha) + 1,1) S(I).h(hamp(ha) + 2,1)],[0 0],'-k');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,2) S(I).h(hamp(ha) + 2,2)],[0.4 0.4],'-y');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,3) S(I).h(hamp(ha) + 2,3)],[0 0],'-k');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,4) S(I).h(hamp(ha) + 2,4)],[1 1],'y');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,5) S(I).h(hamp(ha) + 2,5)],[S(I).h(hamp(ha),5) S(I).h(hamp(ha),5)],'-.m');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,6) S(I).h(hamp(ha) + 2,6)],[S(I).h(hamp(ha),6) S(I).h(hamp(ha),6)],'-.k');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,7) S(I).h(hamp(ha) + 2,7)],[0.17 0.17],'--y');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,8) S(I).h(hamp(ha) + 2,8)],[0.1 0.1],'-r');grid on; hold on; %===Plot===%       
+        plot([S(I).h(hamp(ha) + 1,9) S(I).h(hamp(ha) + 2,9)],[0.02 0.02],'-g');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,10) S(I).h(hamp(ha) + 2,10)],[0.001 0.001],'-c');grid on; hold on; %===Plot===%        
+        plot([S(I).h(hamp(ha) + 1,11) S(I).h(hamp(ha) + 2,11)],[S(I).h(hamp(ha),11) S(I).h(hamp(ha),11)],'-.m');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,12) S(I).h(hamp(ha) + 2,12)],[0 0],'-y');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,13) S(I).h(hamp(ha) + 2,13)],[S(I).h(hamp(ha),13) S(I).h(hamp(ha),13)],'-.m');grid on; hold on; %===Plot===%
+        plot([S(I).h(hamp(ha) + 1,14) S(I).h(hamp(ha) + 2,14)],[mean14 mean14],'m');grid on; hold on; %===Plot===%
+        H  = H + 1;
+        ha = ha + 1;
+        oo = input('\nType 10 and press enter to continue:');
+        
+    end
+    oo = input('\n End of HGs, Type 10 and press enter to delete plot:');
+  H= 1;ha = 1;gca;clf;  
+I = I + 1;    
+    
+end%%While loop end

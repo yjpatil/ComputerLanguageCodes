@@ -1,0 +1,6 @@
+function[LogLkhd] = TestHMM(Data,HMM,i)
+% This function intakes the Data
+
+loglikSMK = dhmm_logprob(Data{i},HMM.prior, HMM.transmat, HMM.obsmat);        
+disp(sprintf('[class SMK: %d -th data]model SMK:%.3f',i,loglikSMK));
+end

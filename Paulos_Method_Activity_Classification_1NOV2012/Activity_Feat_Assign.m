@@ -1,0 +1,41 @@
+function[Subject] = Activity_Feat_Assign(it1,I,featCount,Subject,Feat_AS,Feat_VT)
+
+if(it1 == 2)
+    Subject(I).Activity.Sitting.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Sitting.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 3)
+    Subject(I).Activity.Reading.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Reading.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 4)
+    Subject(I).Activity.Standing.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Standing.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 5)
+    Subject(I).Activity.Walk_Slow.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Walk_Slow.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 6)
+    Subject(I).Activity.Walk_Fast.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Walk_Fast.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 7)
+    Subject(I).Activity.Use_Laptop.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Use_Laptop.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 8)
+    Subject(I).Activity.Eat_with_Hands.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Eat_with_Hands.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 9)
+    Subject(I).Activity.Eat_with_Fork.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Eat_with_Fork.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 10)
+    Subject(I).Activity.Walk_Outside.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Walk_Outside.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 11)
+    Subject(I).Activity.Smoke_Sitting.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Smoke_Sitting.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 12)
+    Subject(I).Activity.Rest_Inside.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Rest_Inside.VT_feat(featCount,:) = Feat_VT;
+elseif(it1 == 13)
+    Subject(I).Activity.Smoke_Standing.AS_feat(featCount,:) = Feat_AS;
+    Subject(I).Activity.Smoke_Standing.VT_feat(featCount,:) = Feat_VT;
+else
+    fprintf('Wrong Activity Choice!!!');
+end
