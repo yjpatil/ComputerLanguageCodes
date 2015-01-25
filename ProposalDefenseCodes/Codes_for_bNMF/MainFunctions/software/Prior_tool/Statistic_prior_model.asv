@@ -1,0 +1,45 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Name:     Statistic_prior_model
+% Function: Introducing statistic prior
+% Inputs:   W    the bases of training data
+%           H    the coefficients of bases
+% Output:   stat_base_term   the diagnal matrix of laplacian graph for training data
+%           stat_coef_term  the laplacian graph for traing data
+%           proj_diag_term   the diagnal matrix of laplacian graph for testing data
+%           proj_graph_term  the laplacian graph for testing data
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+stat_base_term = eye(size(W,2));
+stat_coef_term = eye(size(W,2));
+
+    
+for ii = 1:size(W,2)
+    betW(ii) = 1/(norm(W(:,base_num)));
+    betH(ii) = 1/(norm(H(base_num,:)));
+end
+
+if sType
+    stat_base_term = diag(betW);
+    stat_coef_term = diag(betH);
+else
+    stat_base_term = eye(size(W,2));
+    stat_coef_term = eye(size(W,2));
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
